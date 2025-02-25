@@ -13,29 +13,29 @@ function Header({ currentTab, onTabChange, darkMode, toggleDarkMode, handleShare
     return (
         <header className="header">
             <div className="header-left">
-                <h2>My Dolphin Picker 🐬</h2>
+                <h2>Dolphin Picker 🐬</h2>
             </div>
             <div className="header-right">
                 <button
                     className={`nav-btn ${currentTab === "main" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("main")}
                 >
-                    Randomizer
+                    Randomizer 🔀
                 </button>
                 <button
                     className={`nav-btn ${currentTab === "history" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("history")}
                 >
-                    History
+                    History 📖
                 </button>
                 <button
                     className={`nav-btn ${currentTab === "scoreboard" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("scoreboard")}
                 >
-                    Scoreboard
+                    Scoreboard 📕
                 </button>
                 <button className="nav-btn" onClick={handleShare}>
-                    Share
+                    Share 🤌🏼
                 </button>
 
                 <div className="theme-switch">
@@ -59,7 +59,7 @@ function Footer({ currentTab }) {
 
     return (
         <footer className="footer">
-            <div className="footer-left">© Aks1n3d Corp.</div>
+            <div className="footer-left">©Aks1n3d Corp. 😎</div>
             <div className="footer-right">
                 <a href="https://instagram.com/YourAccount" target="_blank" rel="noopener noreferrer">
                     📷
@@ -271,7 +271,7 @@ function Drum({ people, lastWinner, onWinner, onBack }) {
                         </button>
                     )}
                     <button className="back-btn" onClick={handleBack}>
-                        Back
+                        Back ⬅️
                     </button>
                 </div>
             )}
@@ -430,7 +430,7 @@ function App() {
                     handleShare={handleShare}
                 />
                 <div className="main-ui">
-                    <h1>History of Winners</h1>
+                    <h1>History of Winners 📕</h1>
                     {loading ? (
                         <p>Loading...</p>
                     ) : allWinners.length === 0 ? (
@@ -467,7 +467,7 @@ function App() {
                     handleShare={handleShare}
                 />
                 <div className="main-ui">
-                    <h1>Scoreboard</h1>
+                    <h1>Scoreboard 📕</h1>
                     {loading ? (
                         <p>Loading...</p>
                     ) : scoreboardData.length === 0 ? (
@@ -514,14 +514,14 @@ function App() {
                 <div className="input-area">
                     <input
                         type="text"
-                        placeholder="Enter a name..."
+                        placeholder="Enter a name 🫵🏼"
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
                     />
                     <button onClick={addPerson}>Add ✅</button>
                 </div>
 
-                <h2>List of Participants</h2>
+                <h2>⬇️List of Participants⬇️</h2>
                 {people.length === 0 ? (
                     <p>Please add at least one participant.</p>
                 ) : (
@@ -547,7 +547,7 @@ function App() {
                 )}
 
                 <div className="last-winner-box">
-                    <h2>Last Winner</h2>
+                    <h2>Last Winner 🏆</h2>
                     {loading ? (
                         <p>Loading...</p>
                     ) : lastWinner ? (
