@@ -156,7 +156,7 @@ function Drum({ people, lastWinner, onWinner, onBack }) {
         setOffset(0);
 
         let velocity = 1550 + Math.random() * 525;
-        let friction = 0.988 + Math.random() * 0.01;
+        let friction = 0.99 + Math.random() * 0.01;
         let currentOffset = Math.random() * (namesArray.length * 160);
         let lastTimestamp = 0;
 
