@@ -1,6 +1,6 @@
 // src/App.js
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useRef} from "react";
 import { useSearchParams } from "react-router-dom";
 import "./App.css";
 import { db } from "./firebase";
@@ -75,10 +75,28 @@ function Footer({ currentTab }) {
     );
 }
 
+function getRandomColor() {
+    const letters = "0123456789ABCDEF";
+    let color = "#";
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
 /** Карточка барабана */
 function DrumCard({ name }) {
+    // Запоминаем цвет через useRef, чтобы не генерировать его на каждом рендере
+    const colorRef = useRef(getRandomColor());
+
     return (
-        <div className="card">
+        <div
+            className="card"
+            style={{
+                backgroundColor: colorRef.current,
+                color: "#fff"  // текст белый на цветном фоне
+            }}
+        >
             {name}
         </div>
     );

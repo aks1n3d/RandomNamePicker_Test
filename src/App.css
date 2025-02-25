@@ -292,7 +292,6 @@ input:checked + .slider:before {
   min-width: 150px;
   height: 150px;
   margin-right: 10px;
-  color: #fff;
   font-size: 20px;
   border-radius: 8px;
   box-sizing: border-box;
