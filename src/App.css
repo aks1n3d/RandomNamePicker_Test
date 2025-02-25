@@ -1,61 +1,75 @@
-/* Сброс и базовые стили */
-body, html, .app {
+/* src/App.css */
+
+/* Flex container + dark theme */
+html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  /*font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;*/
-  font-family: 'Grandstander', cursive;
 }
 
-/* Светлая тема по умолчанию */
-body {
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: 'Grandstander', cursive;
   background: #e9f0f5;
   transition: background-color 0.3s;
 }
-
 .dark-mode {
-  background: #2c2c2c;  /* тёмный фон */
+  background: #2c2c2c;
   color: #f0f0f0;
-  transition: background-color 0.3s, color 0.3s;
 }
 
-/* Основной контейнер */
+/* Main content (flex:1) */
 .main-ui {
+  flex: 1;
   position: relative;
   max-width: 600px;
-  margin: 60px auto;
+  margin: 60px auto 40px auto;
   padding: 40px;
   background: #ffffff;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   text-align: center;
-  transition: background-color 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
 .dark-mode .main-ui {
-  background: #3d3d3d; /* более тёмный */
+  background: #3d3d3d;
   color: #f0f0f0;
 }
 
-/* Адаптивность: на мобильных max-width уменьшим */
 @media (max-width: 700px) {
   .main-ui {
-    margin: 20px auto;
+    margin: 20px auto 40px auto;
     max-width: 95%;
   }
 }
 
-/* Заголовки */
-.main-ui h1 {
+/* Input area */
+.input-area {
   margin-bottom: 20px;
-  color: #333;
 }
-.dark-mode .main-ui h1 {
-  color: #f0f0f0;
+.input-area input {
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  margin-right: 5px;
+  outline: 1px solid #ccc;
+}
+.input-area input:focus {
+  outline: 2px solid #007bff;
+}
+.dark-mode .input-area input {
+  background: #555;
+  color: #fff;
+  outline: 1px solid #999;
+}
+.dark-mode .input-area input:focus {
+  outline: 2px solid #2196F3;
 }
 
-/* Кнопки */
+/* Buttons (no border) */
 button {
   cursor: pointer;
   border: none;
@@ -64,72 +78,22 @@ button {
   padding: 8px 12px;
   margin: 5px;
 }
-
 button:focus-visible {
-  outline: 2px solid #ff9900; /* или любой другой цвет */
+  outline: 2px solid #ff9900;
   outline-offset: 2px;
 }
 
-/* Тема / Share / History / Scoreboard */
-.theme-btn,
-.share-btn,
-.history-btn,
-.score-btn {
-  position: relative;
-  color: #fff;
-  background: #007bff;
-}
-
-.theme-btn:hover,
-.share-btn:hover,
-.history-btn:hover,
-.score-btn:hover {
-  background: #0056b3;
-}
-
-/* Инпуты */
-.input-area {
-  margin-bottom: 20px;
-}
-.input-area input {
-  padding: 10px;
+/* Delete button */
+.delete-btn {
+  background: transparent;
+  color: #444;
   font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  margin: 0 5px;
 }
-.dark-mode .input-area input {
-  background: #555;
-  color: #fff;
-  border: 1px solid #999;
+.delete-btn:hover {
+  background: #ffebee;
 }
 
-/* Список людей */
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0;
-}
-li {
-  margin: 10px 0;
-  padding: 10px 15px;
-  background: #f2f2f2;
-  border-radius: 5px;
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 80%;
-  max-width: 500px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.dark-mode li {
-  background: #555;
-  color: #fff;
-}
-
-/* Кнопка "Pick Random" */
+/* Random button */
 .random-btn {
   background: #28a745;
   color: #fff;
@@ -140,7 +104,7 @@ li {
   background: #218838;
 }
 
-/* Блок последнего победителя */
+/* Last winner box */
 .last-winner-box {
   margin-top: 30px;
   padding: 20px;
@@ -153,106 +117,35 @@ li {
   border-color: #666;
 }
 
-/* DRUM SCREEN */
-.drum-screen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #f0f0f0;
-  color: #333;
+/* Списки (History, Participants).
+   Сделаем li чуть больше, не переносим строку */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+li {
+  margin: 10px 0;
+  padding: 10px 15px;
+  background: #f2f2f2;
+  border-radius: 5px;
+  font-size: 18px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  z-index: 9999;
-  box-sizing: border-box;
-  padding: 20px;
-}
+  justify-content: space-between;
 
-.drum-container {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  height: 240px;
-  overflow: hidden;
-  margin-bottom: 20px;
+  width: 90%;
+  max-width: 2000px;
+  margin-left: auto;
+  margin-right: auto;
+  white-space: nowrap; /* не переносим текст */
 }
-
-.drum-track {
-  display: flex;
-  flex-direction: row;
-  will-change: transform;
-}
-
-.card {
-  width: 150px;
-  min-width: 150px;
-  height: 150px;
-  margin-right: 10px;
+.dark-mode li {
+  background: #555;
   color: #fff;
-  font-size: 20px;
-  border-radius: 8px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.arrow {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg);
-  width: 0;
-  height: 0;
-  border-left: 20px solid transparent;
-  border-right: 20px solid transparent;
-  border-top: 30px solid #ff3b3b;
-}
-
-/* Результат */
-.result {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 10px;
-  text-align: center;
-  animation: fadeIn 1s ease-out forwards;
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* Кнопки под барабаном */
-.drum-buttons {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-}
-.spin-again-btn,
-.back-btn {
-  background: #ff9800;
-  color: #fff;
-  padding: 10px 20px;
-  font-size: 16px;
-}
-.spin-again-btn:hover {
-  background: #e68a00;
-}
-.back-btn {
-  background: #999;
-}
-.back-btn:hover {
-  background: #777;
-}
-/* header с flex */
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -274,17 +167,32 @@ li {
   gap: 15px;
 }
 .nav-btn {
-  background: #007bff;
-  color: #fff;
+  background: transparent;
+  color: #444;
+  font-size: 14px;
   border-radius: 5px;
   padding: 8px 12px;
-  font-size: 14px;
 }
 .nav-btn:hover {
-  background: #0056b3;
+  background: #ddd;
+}
+.nav-btn.active-tab {
+  background: #ff9800;
+  color: #fff;
+}
+.dark-mode .nav-btn {
+  color: #fff;
+  background: transparent;
+}
+.dark-mode .nav-btn:hover {
+  background: #444;
+}
+.dark-mode .nav-btn.active-tab {
+  background: #ff9800;
+  color: #fff;
 }
 
-/* Switch (toggle) */
+/* Theme switch */
 .switch {
   position: relative;
   display: inline-block;
@@ -299,8 +207,7 @@ li {
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0; left: 0;
-  right: 0; bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background-color: #ccc;
   transition: .4s;
   border-radius: 24px;
@@ -321,4 +228,139 @@ input:checked + .slider {
 }
 input:checked + .slider:before {
   transform: translateX(16px);
+}
+
+/* FOOTER (не показываем на drum) */
+.footer {
+  background: #eee;
+  border-top: 1px solid #ccc;
+  padding: 10px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dark-mode .footer {
+  background: #333;
+  border-color: #666;
+}
+.footer-left {}
+.footer-right a {
+  margin-left: 15px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 18px;
+}
+.footer-right a:hover {
+  text-decoration: underline;
+}
+
+/* DRUM SCREEN (fullscreen) */
+.drum-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 9999;
+
+  background: #f0f0f0;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.dark-mode .drum-screen {
+  background: #3d3d3d;
+  color: #f0f0f0;
+}
+.drum-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 240px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.drum-track {
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
+}
+.card {
+  width: 150px;
+  min-width: 150px;
+  height: 150px;
+  margin-right: 10px;
+  color: #fff;
+  font-size: 20px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arrow {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 30px solid #ff3b3b;
+}
+.result {
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+  animation: fadeIn 1s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.drum-buttons {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+.spin-again-btn,
+.back-btn {
+  background: #ff9800;
+  color: #fff;
+  padding: 10px 20px;
+  font-size: 16px;
+}
+.spin-again-btn:hover {
+  background: #e68a00;
+}
+.back-btn {
+  background: #999;
+}
+.back-btn:hover {
+  background: #777;
+}
+
+/* Scoreboard container (теперь побольше) */
+.scoreboard-container {
+  max-width: 600px; /* Увеличили до 600px */
+  margin: 20px auto;
+  text-align: left;
+}
+.scoreboard-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.scoreboard-container th,
+.scoreboard-container td {
+  padding: 12px;       /* больше отступ */
+  font-size: 18px;     /* крупнее шрифт */
+  text-align: left;
 }

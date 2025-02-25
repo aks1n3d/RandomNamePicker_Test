@@ -1,38 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+// src/App.js
+
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./App.css";
-import { db } from "./firebase"; // ваш файл инициализации Firebase
+import { db } from "./firebase";
 import { ref, push, onValue } from "firebase/database";
 
-/** Shuffle array (Fisher–Yates) */
-function shuffleArray(array) {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
-
-/** Random color generator */
-function getRandomColor() {
-    const letters = "0123456789ABCDEF";
-    let color = "#";
-    for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-}
-
-/** HEADER */
-function Header({
-                    currentTab,
-                    onTabChange,
-                    darkMode,
-                    toggleDarkMode,
-                    handleShare,
-                }) {
-    // Do not show header on the drum tab
+/** Header (скрываем, если currentTab === 'drum') */
+function Header({ currentTab, onTabChange, darkMode, toggleDarkMode, handleShare }) {
     if (currentTab === "drum") return null;
 
     return (
@@ -40,43 +15,36 @@ function Header({
             <div className="header-left">
                 <h2>My Dolphin Picker 🐬</h2>
             </div>
-
             <div className="header-right">
-                {/* 1) Randomizer */}
                 <button
                     className={`nav-btn ${currentTab === "main" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("main")}
                 >
                     Randomizer
                 </button>
-
-                {/* 2) History */}
                 <button
                     className={`nav-btn ${currentTab === "history" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("history")}
                 >
                     History
                 </button>
-
-                {/* 3) Scoreboard */}
                 <button
-                    className={`nav-btn ${
-                        currentTab === "scoreboard" ? "active-tab" : ""
-                    }`}
+                    className={`nav-btn ${currentTab === "scoreboard" ? "active-tab" : ""}`}
                     onClick={() => onTabChange("scoreboard")}
                 >
                     Scoreboard
                 </button>
-
-                {/* 4) Share */}
                 <button className="nav-btn" onClick={handleShare}>
                     Share
                 </button>
 
-                {/* Theme switch (Dark/Light) */}
                 <div className="theme-switch">
                     <label className="switch">
-                        <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+                        <input
+                            type="checkbox"
+                            checked={darkMode}
+                            onChange={toggleDarkMode}
+                        />
                         <span className="slider round"></span>
                     </label>
                 </div>
@@ -85,117 +53,103 @@ function Header({
     );
 }
 
-/** DrumCard with random background color */
-function DrumCard({ person }) {
-    // Generate color once
-    const colorRef = useRef(getRandomColor());
+/** Footer (скрываем, если currentTab === 'drum') */
+function Footer({ currentTab }) {
+    if (currentTab === "drum") return null;
 
     return (
-        <div className="card" style={{ backgroundColor: colorRef.current }}>
-            {person.avatarUrl && (
-                <img
-                    src={person.avatarUrl}
-                    alt={person.name}
-                    style={{ width: "60px", height: "60px", borderRadius: "50%" }}
-                />
-            )}
-            <div style={{ marginTop: "5px" }}>{person.name}</div>
+        <footer className="footer">
+            <div className="footer-left">© Aks1n3d Corp.</div>
+            <div className="footer-right">
+                <a href="https://instagram.com/YourAccount" target="_blank" rel="noopener noreferrer">
+                    📷
+                </a>
+                <a href="https://linkedin.com/in/YourAccount" target="_blank" rel="noopener noreferrer">
+                    💼
+                </a>
+                <a href="https://twitter.com/YourAccount" target="_blank" rel="noopener noreferrer">
+                    🐦
+                </a>
+            </div>
+        </footer>
+    );
+}
+
+/** Карточка барабана */
+function DrumCard({ name }) {
+    return (
+        <div className="card">
+            {name}
         </div>
     );
 }
 
-/** DRUM */
-function Drum({ people, onWinner, onRemoveWinner, onBack }) {
-    const [isSpinning, setIsSpinning] = useState(false);
+/** Экран барабана (fullscreen) */
+function Drum({ people, lastWinner, onWinner, onBack }) {
     const [offset, setOffset] = useState(0);
     const [rollingNames, setRollingNames] = useState([]);
     const [chosenName, setChosenName] = useState("");
     const [needToSpinAgain, setNeedToSpinAgain] = useState(false);
+    const [isSpinning, setIsSpinning] = useState(false);
 
-    const spinAnimationRef = useRef(null);
-    const drumContainerRef = useRef(null);
-    const [drumContainerWidth, setDrumContainerWidth] = useState(0);
+    const drumContainerRef = React.useRef(null);
+    const spinAnimationRef = React.useRef(null);
 
-    // Sounds
-    const spinSoundRef = useRef(null);
-    const victorySoundRef = useRef(null);
-
-    // Card layout
-    const cardWidth = 150;
-    const cardMargin = 10;
-    const cardTotalWidth = cardWidth + cardMargin;
-    // Gap fraction check
-    const marginFraction = cardMargin / cardTotalWidth;
-    const halfMarginFraction = marginFraction / 2;
-
-    useEffect(() => {
-        spinSoundRef.current = new Audio("/spin.mp3");
-        victorySoundRef.current = new Audio("/victory.mp3");
-    }, []);
-
-    useEffect(() => {
+    React.useEffect(() => {
         prepareDrum();
         return () => {
-            stopAllSounds();
-            clearAnimation();
+            if (spinAnimationRef.current) {
+                cancelAnimationFrame(spinAnimationRef.current);
+                spinAnimationRef.current = null;
+            }
         };
         // eslint-disable-next-line
     }, []);
 
     function prepareDrum() {
-        setIsSpinning(false);
         setChosenName("");
         setNeedToSpinAgain(false);
+        setIsSpinning(true);
 
         setTimeout(() => {
             const width = drumContainerRef.current
                 ? drumContainerRef.current.offsetWidth
                 : window.innerWidth;
-            setDrumContainerWidth(width);
 
-            // Shuffle
-            const shuffled = shuffleArray(people);
-            const repeatCount = 300; // not too big
-            const repeated = [];
-            for (let i = 0; i < repeatCount; i++) {
-                repeated.push(...shuffled);
+            // Исключаем последнего победителя из массива
+            let filtered = people;
+            if (lastWinner) {
+                filtered = filtered.filter((p) => p !== lastWinner);
             }
-            setRollingNames(repeated);
 
-            // Start spin
-            setTimeout(() => spin(repeated, width), 50);
+            // Длинный массив
+            const repeatCount = 300;
+            let bigArray = [];
+            for (let i = 0; i < repeatCount; i++) {
+                bigArray.push(...filtered);
+            }
+            setRollingNames(bigArray);
+
+            setTimeout(() => spin(bigArray, width), 100);
         }, 100);
     }
 
-    let lastTimestamp = 0;
     function spin(namesArray, containerWidth) {
-        clearAnimation();
         setOffset(0);
-        setIsSpinning(true);
 
-        if (spinSoundRef.current) {
-            spinSoundRef.current.currentTime = 0;
-            spinSoundRef.current.play().catch(console.error);
-        }
-
-        // Very high initial velocity
-        let velocity = 800 + Math.random() * 300;
-        let friction = 0.985 + Math.random() * 0.01;
-
-        let currentOffset = Math.random() * (namesArray.length * cardTotalWidth);
-        lastTimestamp = 0;
+        let velocity = 1500 + Math.random() * 500;
+        let friction = 0.98 + Math.random() * 0.01;
+        let currentOffset = Math.random() * (namesArray.length * 160);
+        let lastTimestamp = 0;
 
         function animate(timestamp) {
-            if (!lastTimestamp) {
-                lastTimestamp = timestamp;
-            }
+            if (!lastTimestamp) lastTimestamp = timestamp;
             const delta = timestamp - lastTimestamp;
             lastTimestamp = timestamp;
             const deltaSec = delta / 1000;
 
             currentOffset += velocity * deltaSec;
-            currentOffset %= namesArray.length * cardTotalWidth;
-
+            currentOffset %= (namesArray.length * 160);
             velocity *= friction;
 
             setOffset(currentOffset);
@@ -203,27 +157,30 @@ function Drum({ people, onWinner, onRemoveWinner, onBack }) {
             if (velocity > 5) {
                 spinAnimationRef.current = requestAnimationFrame(animate);
             } else {
-                cancelAnimationFrame(spinAnimationRef.current);
-                spinAnimationRef.current = null;
                 finishSpin(currentOffset, containerWidth, namesArray);
             }
         }
-
         spinAnimationRef.current = requestAnimationFrame(animate);
     }
 
     function finishSpin(currentOffset, containerWidth, namesArray) {
         setIsSpinning(false);
-
-        if (spinSoundRef.current) {
-            spinSoundRef.current.pause();
-            spinSoundRef.current.currentTime = 0;
+        if (spinAnimationRef.current) {
+            cancelAnimationFrame(spinAnimationRef.current);
+            spinAnimationRef.current = null;
         }
+
+        const cardWidth = 150;
+        const cardMargin = 10;
+        const cardTotalWidth = cardWidth + cardMargin;
 
         const centerCoord = currentOffset + containerWidth / 2 - cardWidth / 2;
         const rawIndex = centerCoord / cardTotalWidth;
         const index = Math.round(rawIndex);
         const fraction = Math.abs(rawIndex - index);
+
+        const marginFraction = cardMargin / cardTotalWidth;
+        const halfMarginFraction = marginFraction / 2;
 
         if (
             fraction >= 0.5 - halfMarginFraction &&
@@ -233,61 +190,34 @@ function Drum({ people, onWinner, onRemoveWinner, onBack }) {
             setNeedToSpinAgain(true);
         } else {
             const winner = namesArray[index];
-            setChosenName(winner.name);
-            setNeedToSpinAgain(false);
+            setChosenName(winner);
 
-            if (victorySoundRef.current) {
-                victorySoundRef.current.currentTime = 0;
-                victorySoundRef.current.play().catch(console.error);
-            }
-
-            // Save to Firebase
+            // Сохраняем победителя
             push(ref(db, "winners"), {
-                name: winner.name,
-                avatarUrl: winner.avatarUrl || "",
-                timestamp: Date.now(),
+                name: winner,
+                timestamp: Date.now()
             });
-
-            onWinner(winner.name);
+            onWinner(winner);
         }
     }
 
     function handleSpinAgain() {
         if (chosenName) {
-            onRemoveWinner(chosenName);
             setChosenName("");
             setNeedToSpinAgain(false);
             prepareDrum();
         } else {
-            // If we landed between cards
             if (!rollingNames.length) return;
-            setNeedToSpinAgain(false);
-            spin(rollingNames, drumContainerWidth);
+            spin(rollingNames, drumContainerRef.current.offsetWidth);
         }
     }
 
     function handleBack() {
-        stopAllSounds();
-        clearAnimation();
-        onBack();
-    }
-
-    function clearAnimation() {
         if (spinAnimationRef.current) {
             cancelAnimationFrame(spinAnimationRef.current);
             spinAnimationRef.current = null;
         }
-    }
-
-    function stopAllSounds() {
-        if (spinSoundRef.current) {
-            spinSoundRef.current.pause();
-            spinSoundRef.current.currentTime = 0;
-        }
-        if (victorySoundRef.current) {
-            victorySoundRef.current.pause();
-            victorySoundRef.current.currentTime = 0;
-        }
+        onBack();
     }
 
     return (
@@ -297,8 +227,8 @@ function Drum({ people, onWinner, onRemoveWinner, onBack }) {
                     className="drum-track"
                     style={{ transform: `translateX(-${offset}px)` }}
                 >
-                    {rollingNames.map((person, idx) => (
-                        <DrumCard key={idx} person={person} />
+                    {rollingNames.map((person, i) => (
+                        <DrumCard key={i} name={person} />
                     ))}
                 </div>
                 <div className="arrow"></div>
@@ -331,72 +261,40 @@ function Drum({ people, onWinner, onRemoveWinner, onBack }) {
     );
 }
 
-/** FOOTER */
-function Footer() {
-    return (
-        <footer className="footer">
-            <div className="footer-left">©Aks1n3d Corp. 😎</div>
-            <div className="footer-right">
-                {/* Replace # with your real links */}
-                <a href="https://www.instagram.com/busiachik_/" target="_blank" rel="noopener noreferrer">
-          <span role="img" aria-label="Instagram">
-            📷
-          </span>
-                </a>
-                <a href="https://www.linkedin.com/in/busiak-denys/" target="_blank" rel="noopener noreferrer">
-          <span role="img" aria-label="LinkedIn">
-            💼
-          </span>
-                </a>
-                <a href="https://www.twitch.tv/aks1n3d_" target="_blank" rel="noopener noreferrer">
-          <span role="img" aria-label="Twitch">
-            🎥
-          </span>
-                </a>
-            </div>
-        </footer>
-    );
-}
-
-/** MAIN APP */
 function App() {
-    // Tabs: 'main', 'history', 'scoreboard', 'drum'
     const [currentTab, setCurrentTab] = useState("main");
 
-    // People: [{ name, avatarUrl }, ...]
+    // Храним имена строками
     const [people, setPeople] = useState([]);
 
-    // Winners from Firebase
+    // Winners
     const [allWinners, setAllWinners] = useState([]);
     const [lastWinner, setLastWinner] = useState(null);
 
-    // For adding new participant
+    // input
     const [nameInput, setNameInput] = useState("");
-    const [avatarInput, setAvatarInput] = useState("");
 
-    // Dark mode
+    // dark mode
     const [darkMode, setDarkMode] = useState(false);
-    // Loading
-    const [loading, setLoading] = useState(true);
+    const toggleDarkMode = () => setDarkMode(!darkMode);
 
-    // Error messages
+    const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
 
-    // For URL ?names=...
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Firebase: read winners
+    // Загрузка winners => сортируем от нового к старому
     useEffect(() => {
         setLoading(true);
         const winnersRef = ref(db, "winners");
         onValue(winnersRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const arr = Object.values(data).sort(
-                    (a, b) => a.timestamp - b.timestamp
-                );
+                let arr = Object.values(data);
+                // Новые записи (больший timestamp) идут наверх
+                arr.sort((a, b) => b.timestamp - a.timestamp);
                 setAllWinners(arr);
-                setLastWinner(arr[arr.length - 1]);
+                setLastWinner(arr[0] || null);
             } else {
                 setAllWinners([]);
                 setLastWinner(null);
@@ -405,111 +303,77 @@ function App() {
         });
     }, []);
 
-    // Dark mode effect
+    // dark mode
     useEffect(() => {
-        if (darkMode) {
-            document.body.classList.add("dark-mode");
-        } else {
-            document.body.classList.remove("dark-mode");
-        }
+        if (darkMode) document.body.classList.add("dark-mode");
+        else document.body.classList.remove("dark-mode");
     }, [darkMode]);
 
-    const toggleDarkMode = () => setDarkMode(!darkMode);
-
-    // URL ?names=...
+    // ?names=...
     useEffect(() => {
         const urlNames = searchParams.get("names");
         if (urlNames) {
-            const arr = urlNames.split(",").map((n) => ({ name: n, avatarUrl: "" }));
-            setPeople(arr);
+            setPeople(urlNames.split(","));
         }
     }, [searchParams]);
 
     function updateURL(newPeople) {
-        const names = newPeople.map((p) => p.name);
-        if (names.length === 0) {
+        if (!newPeople.length) {
             setSearchParams({});
         } else {
-            setSearchParams({ names: names.join(",") });
+            setSearchParams({ names: newPeople.join(",") });
         }
     }
 
-    // Add participant
+    // Добавить
     function addPerson() {
         const trimmed = nameInput.trim();
         if (!trimmed) return;
-        if (people.some((p) => p.name === trimmed)) {
+
+        if (people.includes(trimmed)) {
             setErrorMessage("A participant with this name already exists.");
             return;
         }
         setErrorMessage("");
 
-        const newPerson = {
-            name: trimmed,
-            avatarUrl: avatarInput.trim() || "",
-        };
-        const newPeople = [...people, newPerson];
+        const newPeople = [...people, trimmed];
         setPeople(newPeople);
         updateURL(newPeople);
 
         setNameInput("");
-        setAvatarInput("");
     }
 
-    // Remove participant (with confirm)
+    // Удалить
     function removePerson(index) {
         const toRemove = people[index];
-        if (!window.confirm(`Do you want to remove "${toRemove.name}"?`)) {
-            return;
-        }
+        if (!window.confirm(`Remove "${toRemove}"?`)) return;
         const newPeople = people.filter((_, i) => i !== index);
         setPeople(newPeople);
         updateURL(newPeople);
     }
 
-    // Tabs
     function onTabChange(tab) {
         setCurrentTab(tab);
     }
 
-    // "Pick Random" on main tab
-    function handleChooseRandom() {
-        if (people.length === 0) {
-            setErrorMessage("Please add at least one participant.");
-            return;
-        }
-        setErrorMessage("");
-
-        // remove last winner from the array
-        if (lastWinner) {
-            const filtered = people.filter((p) => p.name !== lastWinner.name);
-            if (filtered.length < people.length) {
-                setPeople(filtered);
-                updateURL(filtered);
-            }
-        }
-
-        setCurrentTab("drum");
-    }
-
-    // When we have a new winner from the drum
-    function handleWinnerFromDrum() {
-        // Additional logic if needed
-    }
-
-    // Remove winner from the drum (Spin Again)
-    function handleRemoveWinnerInDrum(name) {
-        const newPeople = people.filter((p) => p.name !== name);
-        setPeople(newPeople);
-        updateURL(newPeople);
-    }
-
-    // Share
     function handleShare() {
         navigator.clipboard
             .writeText(window.location.href)
             .then(() => alert("Link copied to clipboard!"))
             .catch(console.error);
+    }
+
+    function handleChooseRandom() {
+        if (!people.length) {
+            setErrorMessage("Please add at least one participant.");
+            return;
+        }
+        setErrorMessage("");
+        setCurrentTab("drum");
+    }
+
+    function handleWinnerFromDrum() {
+        // ...
     }
 
     // Scoreboard
@@ -521,22 +385,22 @@ function App() {
         return stats;
     }
 
-    // ============= DRUM TAB =============
+    // DRUM
     if (currentTab === "drum") {
         return (
-            <>
+            <div className={`app ${darkMode ? "dark-mode" : ""}`}>
                 <Drum
                     people={people}
+                    lastWinner={lastWinner ? lastWinner.name : null}
                     onWinner={handleWinnerFromDrum}
-                    onRemoveWinner={handleRemoveWinnerInDrum}
                     onBack={() => setCurrentTab("main")}
                 />
-                <Footer />
-            </>
+                <Footer currentTab="drum" />
+            </div>
         );
     }
 
-    // ============= HISTORY TAB =============
+    // HISTORY
     if (currentTab === "history") {
         return (
             <div className={`app ${darkMode ? "dark-mode" : ""}`}>
@@ -552,35 +416,23 @@ function App() {
                     {loading ? (
                         <p>Loading...</p>
                     ) : allWinners.length === 0 ? (
-                        <p>No winners yet 🤷‍♂️</p>
+                        <p>No winners yet 🙁</p>
                     ) : (
                         <ul>
                             {allWinners.map((w, i) => (
                                 <li key={i}>
-                                    {w.avatarUrl && (
-                                        <img
-                                            src={w.avatarUrl}
-                                            alt={w.name}
-                                            style={{
-                                                width: "32px",
-                                                height: "32px",
-                                                borderRadius: "50%",
-                                                marginRight: "8px",
-                                            }}
-                                        />
-                                    )}
                                     {w.name} — {new Date(w.timestamp).toLocaleString()}
                                 </li>
                             ))}
                         </ul>
                     )}
                 </div>
-                <Footer />
+                <Footer currentTab={currentTab} />
             </div>
         );
     }
 
-    // ============= SCOREBOARD TAB =============
+    // SCOREBOARD
     if (currentTab === "scoreboard") {
         const stats = getScoreStats();
         const scoreboardData = Object.keys(stats)
@@ -601,32 +453,34 @@ function App() {
                     {loading ? (
                         <p>Loading...</p>
                     ) : scoreboardData.length === 0 ? (
-                        <p>No winners yet 🤷‍♂️</p>
+                        <p>No winners yet 🙁</p>
                     ) : (
-                        <table style={{ margin: "0 auto" }}>
-                            <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Wins</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {scoreboardData.map((item, i) => (
-                                <tr key={i}>
-                                    <td>{item.name}</td>
-                                    <td>{item.wins}</td>
+                        <div className="scoreboard-container">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Wins</th>
                                 </tr>
-                            ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                {scoreboardData.map((item, i) => (
+                                    <tr key={i}>
+                                        <td>{item.name}</td>
+                                        <td>{item.wins}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
-                <Footer />
+                <Footer currentTab={currentTab} />
             </div>
         );
     }
 
-    // ============= MAIN TAB =============
+    // MAIN
     return (
         <div className={`app ${darkMode ? "dark-mode" : ""}`}>
             <Header
@@ -646,36 +500,21 @@ function App() {
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
                     />
-                    <input
-                        type="text"
-                        placeholder="Avatar URL (optional)"
-                        value={avatarInput}
-                        onChange={(e) => setAvatarInput(e.target.value)}
-                    />
                     <button onClick={addPerson}>Add ✅</button>
                 </div>
 
                 <h2>List of Participants</h2>
                 {people.length === 0 ? (
-                    <p className="no-people-msg">Please add at least one participant.</p>
+                    <p>Please add at least one participant.</p>
                 ) : (
                     <ul>
-                        {people.map((p, index) => (
+                        {people.map((person, index) => (
                             <li key={index}>
-                                {p.avatarUrl && (
-                                    <img
-                                        src={p.avatarUrl}
-                                        alt={p.name}
-                                        style={{
-                                            width: "32px",
-                                            height: "32px",
-                                            borderRadius: "50%",
-                                            marginRight: "8px",
-                                        }}
-                                    />
-                                )}
-                                {p.name}{" "}
-                                <button onClick={() => removePerson(index)} title="Delete">
+                                {person}
+                                <button
+                                    onClick={() => removePerson(index)}
+                                    className="delete-btn"
+                                >
                                     ❌
                                 </button>
                             </li>
@@ -695,25 +534,13 @@ function App() {
                         <p>Loading...</p>
                     ) : lastWinner ? (
                         <div>
-                            {lastWinner.avatarUrl && (
-                                <img
-                                    src={lastWinner.avatarUrl}
-                                    alt={lastWinner.name}
-                                    style={{
-                                        width: "40px",
-                                        height: "40px",
-                                        borderRadius: "50%",
-                                        marginRight: "8px",
-                                    }}
-                                />
-                            )}
                             <strong>{lastWinner.name}</strong>
                             <div style={{ fontSize: "12px", color: "#777" }}>
                                 {new Date(lastWinner.timestamp).toLocaleString()}
                             </div>
                         </div>
                     ) : (
-                        <p>No winners yet 🤷‍♂️</p>
+                        <p>No winners yet 🙁</p>
                     )}
                 </div>
 
@@ -723,7 +550,8 @@ function App() {
                     </div>
                 )}
             </div>
-            <Footer />
+
+            <Footer currentTab={currentTab} />
         </div>
     );
 }
