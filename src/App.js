@@ -1,307 +1,50 @@
-// src/App.js
-
-import React, {useState, useEffect, useRef} from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./App.css";
 import { db } from "./firebase";
 import { ref, push, onValue } from "firebase/database";
 
-/** Header (скрываем, если currentTab === 'drum') */
-function Header({ currentTab, onTabChange, darkMode, toggleDarkMode, handleShare }) {
-    if (currentTab === "drum") return null;
-
-    return (
-        <header className="header">
-            <div className="header-left">
-                <h2>Dolphin Picker 🐬</h2>
-            </div>
-            <div className="header-right">
-                <button
-                    className={`nav-btn ${currentTab === "main" ? "active-tab" : ""}`}
-                    onClick={() => onTabChange("main")}
-                >
-                    Randomizer 🔀
-                </button>
-                <button
-                    className={`nav-btn ${currentTab === "history" ? "active-tab" : ""}`}
-                    onClick={() => onTabChange("history")}
-                >
-                    History 📖
-                </button>
-                <button
-                    className={`nav-btn ${currentTab === "scoreboard" ? "active-tab" : ""}`}
-                    onClick={() => onTabChange("scoreboard")}
-                >
-                    Scoreboard 📕
-                </button>
-                <button className="nav-btn" onClick={handleShare}>
-                    Share 🤌🏼
-                </button>
-
-                <div className="theme-switch">
-                    <label className="switch">
-                        <input
-                            type="checkbox"
-                            checked={darkMode}
-                            onChange={toggleDarkMode}
-                        />
-                        <span className="slider round"></span>
-                    </label>
-                </div>
-            </div>
-        </header>
-    );
-}
-
-/** Footer (скрываем, если currentTab === 'drum') */
-function Footer({ currentTab }) {
-    if (currentTab === "drum") return null;
-
-    return (
-        <footer className="footer">
-            <div className="footer-left">©Aks1n3d Corp. 😎</div>
-            <div className="footer-right">
-                <a href="https://instagram.com/YourAccount" target="_blank" rel="noopener noreferrer">
-                    📷
-                </a>
-                <a href="https://linkedin.com/in/YourAccount" target="_blank" rel="noopener noreferrer">
-                    💼
-                </a>
-                <a href="https://twitter.com/YourAccount" target="_blank" rel="noopener noreferrer">
-                    🐦
-                </a>
-            </div>
-        </footer>
-    );
-}
-
-function getRandomColor() {
-    const letters = "0123456789ABCDEF";
-    let color = "#";
-    for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-}
-
-/** Карточка барабана */
-function DrumCard({ name }) {
-    // Запоминаем цвет через useRef, чтобы не генерировать его на каждом рендере
-    const colorRef = useRef(getRandomColor());
-
-    return (
-        <div
-            className="card"
-            style={{
-                backgroundColor: colorRef.current,
-                color: "#fff"  // текст белый на цветном фоне
-            }}
-        >
-            {name}
-        </div>
-    );
-}
-
-/** Экран барабана (fullscreen) */
-function Drum({ people, lastWinner, onWinner, onBack }) {
-    const [offset, setOffset] = useState(0);
-    const [rollingNames, setRollingNames] = useState([]);
-    const [chosenName, setChosenName] = useState("");
-    const [needToSpinAgain, setNeedToSpinAgain] = useState(false);
-    const [isSpinning, setIsSpinning] = useState(false);
-
-    const drumContainerRef = React.useRef(null);
-    const spinAnimationRef = React.useRef(null);
-
-    React.useEffect(() => {
-        prepareDrum();
-        return () => {
-            if (spinAnimationRef.current) {
-                cancelAnimationFrame(spinAnimationRef.current);
-                spinAnimationRef.current = null;
-            }
-        };
-        // eslint-disable-next-line
-    }, []);
-
-    function prepareDrum() {
-        setChosenName("");
-        setNeedToSpinAgain(false);
-        setIsSpinning(true);
-
-        setTimeout(() => {
-            const width = drumContainerRef.current
-                ? drumContainerRef.current.offsetWidth
-                : window.innerWidth;
-
-            // Исключаем последнего победителя из массива
-            let filtered = people;
-            if (lastWinner) {
-                filtered = filtered.filter((p) => p !== lastWinner);
-            }
-
-            // Длинный массив
-            const repeatCount = 300;
-            let bigArray = [];
-            for (let i = 0; i < repeatCount; i++) {
-                bigArray.push(...filtered);
-            }
-            setRollingNames(bigArray);
-
-            setTimeout(() => spin(bigArray, width), 100);
-        }, 100);
-    }
-
-    function spin(namesArray, containerWidth) {
-        setOffset(0);
-
-        let velocity = 1550 + Math.random() * 525;
-        let friction = 0.99 + Math.random() * 0.01;
-        let currentOffset = Math.random() * (namesArray.length * 160);
-        let lastTimestamp = 0;
-
-        function animate(timestamp) {
-            if (!lastTimestamp) lastTimestamp = timestamp;
-            const delta = timestamp - lastTimestamp;
-            lastTimestamp = timestamp;
-            const deltaSec = delta / 1000;
-
-            currentOffset += velocity * deltaSec;
-            currentOffset %= (namesArray.length * 160);
-            velocity *= friction;
-
-            setOffset(currentOffset);
-
-            if (velocity > 5) {
-                spinAnimationRef.current = requestAnimationFrame(animate);
-            } else {
-                finishSpin(currentOffset, containerWidth, namesArray);
-            }
-        }
-        spinAnimationRef.current = requestAnimationFrame(animate);
-    }
-
-    function finishSpin(currentOffset, containerWidth, namesArray) {
-        setIsSpinning(false);
-        if (spinAnimationRef.current) {
-            cancelAnimationFrame(spinAnimationRef.current);
-            spinAnimationRef.current = null;
-        }
-
-        const cardWidth = 150;
-        const cardMargin = 10;
-        const cardTotalWidth = cardWidth + cardMargin;
-
-        const centerCoord = currentOffset + containerWidth / 2 - cardWidth / 2;
-        const rawIndex = centerCoord / cardTotalWidth;
-        const index = Math.round(rawIndex);
-        const fraction = Math.abs(rawIndex - index);
-
-        const marginFraction = cardMargin / cardTotalWidth;
-        const halfMarginFraction = marginFraction / 2;
-
-        if (
-            fraction >= 0.5 - halfMarginFraction &&
-            fraction <= 0.5 + halfMarginFraction
-        ) {
-            setChosenName("");
-            setNeedToSpinAgain(true);
-        } else {
-            const winner = namesArray[index];
-            setChosenName(winner);
-
-            // Сохраняем победителя
-            push(ref(db, "winners"), {
-                name: winner,
-                timestamp: Date.now()
-            });
-            onWinner(winner);
-        }
-    }
-
-    function handleSpinAgain() {
-        if (chosenName) {
-            setChosenName("");
-            setNeedToSpinAgain(false);
-            prepareDrum();
-        } else {
-            if (!rollingNames.length) return;
-            spin(rollingNames, drumContainerRef.current.offsetWidth);
-        }
-    }
-
-    function handleBack() {
-        if (spinAnimationRef.current) {
-            cancelAnimationFrame(spinAnimationRef.current);
-            spinAnimationRef.current = null;
-        }
-        onBack();
-    }
-
-    return (
-        <div className="drum-screen">
-            <div className="drum-container" ref={drumContainerRef}>
-                <div
-                    className="drum-track"
-                    style={{ transform: `translateX(-${offset}px)` }}
-                >
-                    {rollingNames.map((person, i) => (
-                        <DrumCard key={i} name={person} />
-                    ))}
-                </div>
-                <div className="arrow"></div>
-            </div>
-
-            {!isSpinning && chosenName && (
-                <div className="result">
-                    <h2>The Winner is {chosenName} 🎉</h2>
-                </div>
-            )}
-            {!isSpinning && needToSpinAgain && (
-                <div className="result">
-                    <h2>Arrow landed between cards! 🫣</h2>
-                </div>
-            )}
-
-            {!isSpinning && (
-                <div className="drum-buttons">
-                    {(needToSpinAgain || chosenName) && (
-                        <button className="spin-again-btn" onClick={handleSpinAgain}>
-                            Spin Again 🔄
-                        </button>
-                    )}
-                    <button className="back-btn" onClick={handleBack}>
-                        Back ⬅️
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}
+// Компоненты
+import Drum from "./components/Drum";
+import History from "./components/History";
+import Scoreboard from "./components/Scoreboard";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
 
 function App() {
+    // =======================
+    // ОБЪЯВЛЯЕМ ВСЕ СТЕЙТЫ
+    // =======================
+
+    // Текущий таб ('main', 'drum', 'history', 'scoreboard')
     const [currentTab, setCurrentTab] = useState("main");
 
-    // Храним имена строками
+    // Список участников (строки)
     const [people, setPeople] = useState([]);
 
-    // Winners
+    // Все победители и последний победитель
     const [allWinners, setAllWinners] = useState([]);
     const [lastWinner, setLastWinner] = useState(null);
 
-    // input
+    // Для добавления новых имён
     const [nameInput, setNameInput] = useState("");
 
-    // dark mode
+    // Тёмная тема
     const [darkMode, setDarkMode] = useState(false);
-    const toggleDarkMode = () => setDarkMode(!darkMode);
 
-    const [loading, setLoading] = useState(true);
+    // Состояние загрузки + ошибок
+    const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
+    // Для чтения параметров ?names=...
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Загрузка winners => сортируем от нового к старому
+
+    // ========================
+    // USEEFFECTS
+    // ========================
+
+    // 1) Загружаем winners из Firebase => сортируем новые сверху
     useEffect(() => {
         setLoading(true);
         const winnersRef = ref(db, "winners");
@@ -309,8 +52,7 @@ function App() {
             const data = snapshot.val();
             if (data) {
                 let arr = Object.values(data);
-                // Новые записи (больший timestamp) идут наверх
-                arr.sort((a, b) => b.timestamp - a.timestamp);
+                arr.sort((a, b) => b.timestamp - a.timestamp); // последние идут первыми
                 setAllWinners(arr);
                 setLastWinner(arr[0] || null);
             } else {
@@ -321,13 +63,16 @@ function App() {
         });
     }, []);
 
-    // dark mode
+    // 2) Подключаем / отключаем dark mode
     useEffect(() => {
-        if (darkMode) document.body.classList.add("dark-mode");
-        else document.body.classList.remove("dark-mode");
+        if (darkMode) {
+            document.body.classList.add("dark-mode");
+        } else {
+            document.body.classList.remove("dark-mode");
+        }
     }, [darkMode]);
 
-    // ?names=...
+    // 3) Если в URL есть ?names=...
     useEffect(() => {
         const urlNames = searchParams.get("names");
         if (urlNames) {
@@ -335,6 +80,12 @@ function App() {
         }
     }, [searchParams]);
 
+
+    // =====================
+    // ФУНКЦИИ
+    // =====================
+
+    /** Для обновления ?names=... */
     function updateURL(newPeople) {
         if (!newPeople.length) {
             setSearchParams({});
@@ -343,7 +94,7 @@ function App() {
         }
     }
 
-    // Добавить
+    /** Добавляем участника */
     function addPerson() {
         const trimmed = nameInput.trim();
         if (!trimmed) return;
@@ -361,7 +112,7 @@ function App() {
         setNameInput("");
     }
 
-    // Удалить
+    /** Удаляем участника */
     function removePerson(index) {
         const toRemove = people[index];
         if (!window.confirm(`Remove "${toRemove}"?`)) return;
@@ -370,31 +121,35 @@ function App() {
         updateURL(newPeople);
     }
 
-    function onTabChange(tab) {
-        setCurrentTab(tab);
+    /** Темная тема - переключатель */
+    function toggleDarkMode() {
+        setDarkMode(!darkMode);
     }
 
+    /** Поделиться ссылкой */
     function handleShare() {
         navigator.clipboard
             .writeText(window.location.href)
-            .then(() => alert("Link copied to clipboard!"))
+            .then(() => alert("Link copied to clipboard! 📋"))
             .catch(console.error);
     }
 
+    /** Переход на барабан */
     function handleChooseRandom() {
         if (!people.length) {
-            setErrorMessage("Please add at least one participant.");
+            setErrorMessage("Please add at least one participant. 🙏🏼");
             return;
         }
         setErrorMessage("");
         setCurrentTab("drum");
     }
 
-    function handleWinnerFromDrum() {
-        // ...
+    /** Когда барабан выбрал победителя */
+    function handleWinnerFromDrum(winnerName) {
+        push(ref(db, "winners"), { name: winnerName, timestamp: Date.now() });
     }
 
-    // Scoreboard
+    /** Подсчёт побед */
     function getScoreStats() {
         const stats = {};
         allWinners.forEach((w) => {
@@ -402,6 +157,10 @@ function App() {
         });
         return stats;
     }
+
+    // =====================
+    // РЕНДЕР ПО ТАБАМ
+    // =====================
 
     // DRUM
     if (currentTab === "drum") {
@@ -424,26 +183,13 @@ function App() {
             <div className={`app ${darkMode ? "dark-mode" : ""}`}>
                 <Header
                     currentTab={currentTab}
-                    onTabChange={onTabChange}
+                    onTabChange={setCurrentTab}
                     darkMode={darkMode}
                     toggleDarkMode={toggleDarkMode}
                     handleShare={handleShare}
                 />
                 <div className="main-ui">
-                    <h1>History of Winners 📕</h1>
-                    {loading ? (
-                        <p>Loading...</p>
-                    ) : allWinners.length === 0 ? (
-                        <p>No winners yet 🙁</p>
-                    ) : (
-                        <ul>
-                            {allWinners.map((w, i) => (
-                                <li key={i}>
-                                    {w.name} — {new Date(w.timestamp).toLocaleString()}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    <History loading={loading} allWinners={allWinners} />
                 </div>
                 <Footer currentTab={currentTab} />
             </div>
@@ -453,45 +199,17 @@ function App() {
     // SCOREBOARD
     if (currentTab === "scoreboard") {
         const stats = getScoreStats();
-        const scoreboardData = Object.keys(stats)
-            .map((n) => ({ name: n, wins: stats[n] }))
-            .sort((a, b) => b.wins - a.wins);
-
         return (
             <div className={`app ${darkMode ? "dark-mode" : ""}`}>
                 <Header
                     currentTab={currentTab}
-                    onTabChange={onTabChange}
+                    onTabChange={setCurrentTab}
                     darkMode={darkMode}
                     toggleDarkMode={toggleDarkMode}
                     handleShare={handleShare}
                 />
                 <div className="main-ui">
-                    <h1>Scoreboard 📕</h1>
-                    {loading ? (
-                        <p>Loading...</p>
-                    ) : scoreboardData.length === 0 ? (
-                        <p>No winners yet 🙁</p>
-                    ) : (
-                        <div className="scoreboard-container">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Wins</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {scoreboardData.map((item, i) => (
-                                    <tr key={i}>
-                                        <td>{item.name}</td>
-                                        <td>{item.wins}</td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    <Scoreboard loading={loading} stats={stats} />
                 </div>
                 <Footer currentTab={currentTab} />
             </div>
@@ -503,13 +221,13 @@ function App() {
         <div className={`app ${darkMode ? "dark-mode" : ""}`}>
             <Header
                 currentTab={currentTab}
-                onTabChange={onTabChange}
+                onTabChange={setCurrentTab}
                 darkMode={darkMode}
                 toggleDarkMode={toggleDarkMode}
                 handleShare={handleShare}
             />
             <div className="main-ui">
-                <h1>Dolphin Random Person Picker 🐬</h1>
+                <h1>Random Person Picker 🐬</h1>
 
                 <div className="input-area">
                     <input
@@ -526,13 +244,10 @@ function App() {
                     <p>Please add at least one participant.</p>
                 ) : (
                     <ul>
-                        {people.map((person, index) => (
-                            <li key={index}>
-                                {person}
-                                <button
-                                    onClick={() => removePerson(index)}
-                                    className="delete-btn"
-                                >
+                        {people.map((p, i) => (
+                            <li key={i}>
+                                {p}{" "}
+                                <button className="delete-btn" onClick={() => removePerson(i)}>
                                     ❌
                                 </button>
                             </li>
@@ -568,7 +283,6 @@ function App() {
                     </div>
                 )}
             </div>
-
             <Footer currentTab={currentTab} />
         </div>
     );

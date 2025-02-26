@@ -321,9 +321,21 @@ input:checked + .slider:before {
   text-align: center;
   animation: fadeIn 1s ease-out forwards;
 }
+.fade-in {
+  animation: fadeIn 0.5s forwards ease-out;
+}
+.fade-out {
+  animation: fadeOut 0.5s forwards ease-in;
+}
+
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.98); }
 }
 .drum-buttons {
   display: flex;
