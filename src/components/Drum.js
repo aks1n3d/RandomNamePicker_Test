@@ -94,7 +94,7 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
     function spin(namesArray, containerWidth) {
         setOffset(0);
         let velocity = 1500 + Math.random() * 500;
-        let friction = 0.98 + Math.random() * 0.01;
+        let friction = 0.989 + Math.random() * 0.01;
         const cardTotal = 160;
         let currentOffset = Math.random() * (namesArray.length * cardTotal);
         let lastTimestamp = 0;

@@ -240,13 +240,12 @@ export default function TeamMainPage() {
                                 </button>
                             </li>
                         ))}
+                        {people.length > 0 && (
+                            <button className="random-btn" onClick={handleChooseRandom}>
+                                Pick Random 🔀
+                            </button>
+                        )}
                     </ul>
-                )}
-
-                {people.length > 0 && (
-                    <button className="random-btn" onClick={handleChooseRandom}>
-                        Pick Random 🔀
-                    </button>
                 )}
 
                 <div className="last-winner-box">
