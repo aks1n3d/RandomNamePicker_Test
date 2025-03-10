@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import confetti from "canvas-confetti";
 
-// 🎨 Функция случайного цвета для карточек
+// Функция случайного цвета (не меняем)
 function getRandomColor() {
     const letters = "0123456789ABCDEF";
     let color = "#";
@@ -11,13 +11,13 @@ function getRandomColor() {
     return color;
 }
 
-// 📌 Компонент карточки участника
+// Карточка участника
 function DrumCard({ name }) {
     const colorRef = useRef(getRandomColor());
     return (
         <div
             className="card"
-            style={{ backgroundColor: colorRef.current, color: "#000000" }}
+            style={{ backgroundColor: colorRef.current, color: "#000" }}
         >
             {name}
         </div>
@@ -34,16 +34,35 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
     const drumContainerRef = useRef(null);
     const spinAnimationRef = useRef(null);
 
-    // 🎰 Подготовка барабана
+    // ⬇️ Ссылки на звуки
+    const spinSoundRef = useRef(null);
+    const victorySoundRef = useRef(null);
+
+    // Инициируем аудио
+    useEffect(() => {
+        spinSoundRef.current = new Audio("/spin.mp3");
+        victorySoundRef.current = new Audio("/victory.mp3");
+    }, []);
+
+    // При монтировании
     useEffect(() => {
         prepareDrum();
         return () => {
             if (spinAnimationRef.current) {
                 cancelAnimationFrame(spinAnimationRef.current);
             }
+            // Останавливаем звуки
+            if (spinSoundRef.current) {
+                spinSoundRef.current.pause();
+                spinSoundRef.current.currentTime = 0;
+            }
+            if (victorySoundRef.current) {
+                victorySoundRef.current.pause();
+                victorySoundRef.current.currentTime = 0;
+            }
         };
-// eslint-disable-next-line
-    },[]);
+        // eslint-disable-next-line
+    }, []);
 
     function prepareDrum() {
         setChosenName("");
@@ -55,10 +74,12 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
                 ? drumContainerRef.current.offsetWidth
                 : window.innerWidth;
 
+            // Убираем последний выигрыш
             let filtered = [...people];
             if (lastWinner) {
                 filtered = filtered.filter((p) => p !== lastWinner);
             }
+
             const repeatCount = 300;
             let bigArray = [];
             for (let i = 0; i < repeatCount; i++) {
@@ -70,22 +91,28 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
         }, 100);
     }
 
-    // 🔄 Анимация барабана
     function spin(namesArray, containerWidth) {
         setOffset(0);
-        let velocity = 2000 + Math.random() * 500;
-        let friction = 0.985;
-        const cardTotal = 160; // 🎰 Размер карточки с отступами
+        let velocity = 1500 + Math.random() * 500;
+        let friction = 0.98 + Math.random() * 0.01;
+        const cardTotal = 160;
         let currentOffset = Math.random() * (namesArray.length * cardTotal);
         let lastTimestamp = 0;
 
+        // ⬇️ Проигрываем звук спин
+        if (spinSoundRef.current) {
+            spinSoundRef.current.currentTime = 0;
+            spinSoundRef.current.play().catch((err) => console.log(err));
+        }
+
         function animate(timestamp) {
             if (!lastTimestamp) lastTimestamp = timestamp;
-            const deltaSec = (timestamp - lastTimestamp) / 1000;
+            const delta = timestamp - lastTimestamp;
             lastTimestamp = timestamp;
+            const deltaSec = delta / 1000;
 
             currentOffset += velocity * deltaSec;
-            currentOffset %= (namesArray.length * cardTotal);
+            currentOffset %= namesArray.length * cardTotal;
             velocity *= friction;
 
             setOffset(currentOffset);
@@ -99,9 +126,15 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
         spinAnimationRef.current = requestAnimationFrame(animate);
     }
 
-    // 🎯 Определение победителя
     function finishSpin(currentOffset, containerWidth, namesArray) {
         setIsSpinning(false);
+
+        // Останавливаем спин-звук
+        if (spinSoundRef.current) {
+            spinSoundRef.current.pause();
+            spinSoundRef.current.currentTime = 0;
+        }
+
         if (spinAnimationRef.current) {
             cancelAnimationFrame(spinAnimationRef.current);
             spinAnimationRef.current = null;
@@ -113,6 +146,7 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
         const winner = namesArray[index];
 
         if (!winner) {
+            setChosenName("");
             setNeedToSpinAgain(true);
             return;
         }
@@ -120,13 +154,19 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
         setChosenName(winner);
         setNeedToSpinAgain(false);
 
-        // 🎉 Запускаем конфетти
+        // Запускаем конфетти
         confetti({
             particleCount: 250,
             spread: 100,
             origin: { y: 0.6 },
             zIndex: 9999,
         });
+
+        // ⬇️ Звук победы
+        if (victorySoundRef.current) {
+            victorySoundRef.current.currentTime = 0;
+            victorySoundRef.current.play().catch((err) => console.log(err));
+        }
 
         onWinner(winner);
     }
@@ -147,13 +187,25 @@ export default function Drum({ people, lastWinner, onWinner, onBack }) {
             cancelAnimationFrame(spinAnimationRef.current);
             spinAnimationRef.current = null;
         }
+        // Останавливаем звуки
+        if (spinSoundRef.current) {
+            spinSoundRef.current.pause();
+            spinSoundRef.current.currentTime = 0;
+        }
+        if (victorySoundRef.current) {
+            victorySoundRef.current.pause();
+            victorySoundRef.current.currentTime = 0;
+        }
         onBack();
     }
 
     return (
         <div className="drum-screen">
             <div className="drum-container" ref={drumContainerRef}>
-                <div className="drum-track" style={{ transform: `translateX(-${offset}px)` }}>
+                <div
+                    className="drum-track"
+                    style={{ transform: `translateX(-${offset}px)` }}
+                >
                     {rollingNames.map((person, i) => (
                         <DrumCard key={i} name={person} />
                     ))}
